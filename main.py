@@ -6,16 +6,21 @@ import io
 from datetime import datetime
 import google.generativeai as genai
 
-# --- 0. GEMINI AI SOZLAMASI (ENG BARQAROR VERSIYA) ---
+# --- 0. GEMINI AI SOZLAMASI (YAKUNIY TUZATISH) ---
 GEMINI_API_KEY = "AIzaSyAox2XPBv1WoKQwBi1K_V8-6VwFssWDyGU"
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Bu yerda modelni 'gemini-pro' ga o'zgartirdik
+# Bu yerda bir nechta variantni sinab ko'ramiz
 try:
-    model = genai.GenerativeModel('gemini-pro')
-except Exception as e:
-    st.error(f"Modelni yuklashda xatolik: {e}")
-
+    # Eng yangi flash modeli
+    model = genai.GenerativeModel('gemini-1.5-flash')
+except:
+    try:
+        # Eski barqaror pro modeli
+        model = genai.GenerativeModel('models/gemini-pro')
+    except:
+        # Eng oddiy variant
+        model = genai.GenerativeModel('gemini-pro')
 # --- 1. MA'LUMOTLAR BAZASI FUNKSIYALARI ---
 def create_db():
     conn = sqlite3.connect('ustoz_pro.db', check_same_thread=False)
@@ -33,17 +38,24 @@ conn = create_db()
 # --- 2. AI VA DOCX FUNKSIYALARI ---
 
 def generate_ai_content(mavzu):
-    # Promptni sodda va aniq qildik
-    full_prompt = f"O'qituvchi uchun '{mavzu}' mavzusida o'zbek tilida batafsil dars konspekti tayyorlab ber."
+    # Promptni yanada aniqroq qildik
+    full_prompt = (
+        f"Siz fizika fani o'qituvchisisiz. '{mavzu}' mavzusida o'zbek tilida "
+        f"professional dars konspekti tayyorlang. Mundarija: Maqsad, Nazariya, Masalalar, Uyga vazifa."
+    )
     
     try:
+        # Bu qator xatolikni oldini olish uchun stream=False bilan ishlaydi
         response = model.generate_content(full_prompt)
-        if response.text:
+        
+        # Agar javob bo'sh kelsa yoki xato bo'lsa tekshirish
+        if response and response.text:
             return response.text
         else:
-            return "AI javob qaytara olmadi. Mavzuni boshqacha yozib ko'ring."
+            return "AI javob qaytara olmadi. Iltimos, birozdan so'ng qayta urinib ko'ring."
     except Exception as e:
-        return f"AI xatoligi: {str(e)}"
+        # Xatolikni foydalanuvchiga tushunarli ko'rsatish
+        return f"Tizimda texnik uzilish: {str(e)}"
 
 def create_docx(mavzu, content):
     doc = Document()
