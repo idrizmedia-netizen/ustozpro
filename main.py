@@ -6,21 +6,23 @@ import io
 from datetime import datetime
 import google.generativeai as genai
 
-# --- 0. GEMINI AI SOZLAMASI (YAKUNIY TUZATISH) ---
+# --- 0. GEMINI AI SOZLAMASI (YAKUNIY VA XATOSIZ) ---
 GEMINI_API_KEY = "AIzaSyAox2XPBv1WoKQwBi1K_V8-6VwFssWDyGU"
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Bu yerda bir nechta variantni sinab ko'ramiz
-try:
-    # Eng yangi flash modeli
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except:
-    try:
-        # Eski barqaror pro modeli
-        model = genai.GenerativeModel('models/gemini-pro')
-    except:
-        # Eng oddiy variant
-        model = genai.GenerativeModel('gemini-pro')
+# Bir nechta model nomini tekshirib, ishlaydigani tanlanadi
+def get_model():
+    for m in ['gemini-1.5-flash', 'gemini-pro', 'models/gemini-pro']:
+        try:
+            model = genai.GenerativeModel(m)
+            # Kichik test qilib ko'ramiz
+            model.generate_content("test")
+            return model
+        except:
+            continue
+    return genai.GenerativeModel('gemini-pro')
+
+model = get_model()
 # --- 1. MA'LUMOTLAR BAZASI FUNKSIYALARI ---
 def create_db():
     conn = sqlite3.connect('ustoz_pro.db', check_same_thread=False)
@@ -38,25 +40,16 @@ conn = create_db()
 # --- 2. AI VA DOCX FUNKSIYALARI ---
 
 def generate_ai_content(mavzu):
-    # Promptni yanada aniqroq qildik
-    full_prompt = (
-        f"Siz fizika fani o'qituvchisisiz. '{mavzu}' mavzusida o'zbek tilida "
-        f"professional dars konspekti tayyorlang. Mundarija: Maqsad, Nazariya, Masalalar, Uyga vazifa."
-    )
-    
+    prompt = f"Siz fizika o'qituvchisisiz. '{mavzu}' mavzusida o'zbek tilida dars konspekti yozing. Maqsad, nazariya va savollar bo'lsin."
     try:
-        # Bu qator xatolikni oldini olish uchun stream=False bilan ishlaydi
-        response = model.generate_content(full_prompt)
-        
-        # Agar javob bo'sh kelsa yoki xato bo'lsa tekshirish
-        if response and response.text:
+        # Faqat matnni olishni kafolatlaymiz
+        response = model.generate_content(prompt)
+        if hasattr(response, 'text'):
             return response.text
         else:
-            return "AI javob qaytara olmadi. Iltimos, birozdan so'ng qayta urinib ko'ring."
+            return "AI matn yarata olmadi. Iltimos, qaytadan urinib ko'ring."
     except Exception as e:
-        # Xatolikni foydalanuvchiga tushunarli ko'rsatish
-        return f"Tizimda texnik uzilish: {str(e)}"
-
+        return f"Texnik xatolik: {str(e)}"
 def create_docx(mavzu, content):
     doc = Document()
     # ... (bu yerda create_docx funksiyasining qolgan kodi turadi)
