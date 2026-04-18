@@ -6,11 +6,15 @@ import io
 from datetime import datetime
 import google.generativeai as genai
 
-# --- 0. GEMINI AI SOZLAMASI ---
-# Kalitni shu yerga xavfsiz qilib joylashtirdik
+# --- 0. GEMINI AI SOZLAMASI (YANGILANGAN) ---
 GEMINI_API_KEY = "AIzaSyAox2XPBv1WoKQwBi1K_V8-6VwFssWDyGU"
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+
+# Model nomini tekshirilgan formatda yozamiz
+try:
+    model = genai.GenerativeModel('gemini-1.5-flash-latest') # '-latest' qo'shildi
+except:
+    model = genai.GenerativeModel('gemini-pro') # Agar flash ishlamasa, pro versiyaga o'tadi
 
 # --- 1. MA'LUMOTLAR BAZASI FUNKSIYALARI ---
 def create_db():
@@ -166,13 +170,12 @@ elif page == "AI Konspekt Generator":
         if mavzu:
             with st.spinner('Gemini AI dars ishlanmasini tayyorlamoqda...'):
                 try:
-                    # Haqiqiy AI kontentini yaratish
+                    # Modelni chaqirishda xatolik ehtimolini kamaytirish
                     ai_content = generate_ai_content(mavzu)
                     
                     st.markdown("### 📝 AI tomonidan tayyorlangan konspekt:")
-                    st.write(ai_content)
+                    st.info(ai_content) # Matnni chiroyli ko'rinishda chiqarish
                     
-                    # Word faylni generatsiya qilish
                     file_data = create_docx(mavzu, ai_content)
                     st.download_button(
                         label="📄 Word faylni yuklab olish",
@@ -181,6 +184,7 @@ elif page == "AI Konspekt Generator":
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                 except Exception as e:
-                    st.error(f"Xatolik yuz berdi: {e}")
+                    st.error(f"AI bilan bog'lanishda xatolik: {e}")
+                    st.info("Maslahat: API kalitini yangilab ko'ring yoki model nomini 'gemini-pro' ga o'zgartiring.")
         else:
             st.warning("Iltimos, mavzu nomini kiriting!")
