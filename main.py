@@ -6,15 +6,15 @@ import io
 from datetime import datetime
 import google.generativeai as genai
 
-# --- 0. GEMINI AI SOZLAMASI (YANGILANGAN) ---
+# --- 0. GEMINI AI SOZLAMASI (ENG BARQAROR VERSIYA) ---
 GEMINI_API_KEY = "AIzaSyAox2XPBv1WoKQwBi1K_V8-6VwFssWDyGU"
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Model nomini tekshirilgan formatda yozamiz
+# Bu yerda modelni 'gemini-pro' ga o'zgartirdik
 try:
-    model = genai.GenerativeModel('gemini-1.5-flash-latest') # '-latest' qo'shildi
-except:
-    model = genai.GenerativeModel('gemini-pro') # Agar flash ishlamasa, pro versiyaga o'tadi
+    model = genai.GenerativeModel('gemini-pro')
+except Exception as e:
+    st.error(f"Modelni yuklashda xatolik: {e}")
 
 # --- 1. MA'LUMOTLAR BAZASI FUNKSIYALARI ---
 def create_db():
@@ -31,21 +31,23 @@ def create_db():
 conn = create_db()
 
 # --- 2. AI VA DOCX FUNKSIYALARI ---
+
 def generate_ai_content(mavzu):
-    prompt = f"""
-    Siz tajribali pedagog va o'qituvchisiz. '{mavzu}' mavzusi bo'yicha o'zbek tilida dars konspekti tayyorlang.
-    Konspekt quyidagi qismlardan iborat bo'lsin:
-    1. Darsning maqsadi (ta'limiy, tarbiyaviy, rivojlantiruvchi).
-    2. Yangi mavzu bayoni (nazariy qismlar, qonuniyatlar).
-    3. Mustahkamlash: Mavzuga doir 3 ta savol yoki masala.
-    4. Uyga vazifa.
-    Javobni chiroyli va akademik tilda bering.
-    """
-    response = model.generate_content(prompt)
-    return response.text
+    # Promptni sodda va aniq qildik
+    full_prompt = f"O'qituvchi uchun '{mavzu}' mavzusida o'zbek tilida batafsil dars konspekti tayyorlab ber."
+    
+    try:
+        response = model.generate_content(full_prompt)
+        if response.text:
+            return response.text
+        else:
+            return "AI javob qaytara olmadi. Mavzuni boshqacha yozib ko'ring."
+    except Exception as e:
+        return f"AI xatoligi: {str(e)}"
 
 def create_docx(mavzu, content):
     doc = Document()
+    # ... (bu yerda create_docx funksiyasining qolgan kodi turadi)
     doc.add_heading('Ustoz Pro | AI Dars Konspekti', 0)
     doc.add_paragraph(f"Sana: {datetime.now().strftime('%Y-%m-%d')}")
     doc.add_paragraph(f"Mavzu: {mavzu}")
