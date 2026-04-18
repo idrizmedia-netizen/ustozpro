@@ -12,7 +12,7 @@ def create_db():
     # O'quvchilar jadvali
     c.execute('''CREATE TABLE IF NOT EXISTS students 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, grade TEXT)''')
-    # Baholar jadvali (kelajakda saqlash uchun)
+    # Baholar jadvali
     c.execute('''CREATE TABLE IF NOT EXISTS marks 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER, 
                   mark TEXT, comment TEXT, date TEXT)''')
@@ -54,7 +54,7 @@ def login_page():
     st.info("Tizimdan foydalanish uchun shaxsingizni tasdiqlang.")
     if st.button("🔴 Google orqali kirish"):
         st.session_state.logged_in = True
-        st.session_state.user_name = "Normurodov I.B." # Haqiqiy API-da Google'dan keladi
+        st.session_state.user_name = "Normurodov I.B." 
         st.rerun()
 
 if not st.session_state.logged_in:
@@ -64,7 +64,7 @@ if not st.session_state.logged_in:
 # --- 4. ASOSIY SAHIFA SOZLAMALARI ---
 st.set_page_config(page_title="Ustoz Pro | Digital System", layout="wide")
 
-# Tepaga o'qituvchi ma'lumotlari
+# Tepada o'qituvchi ma'lumotlari
 col_head1, col_head2 = st.columns([3, 1])
 with col_head1:
     st.subheader(f"👨‍🏫 O'qituvchi: {st.session_state.user_name}")
@@ -118,24 +118,53 @@ if page == "Jurnal":
     else:
         st.warning("O'quvchilar topilmadi. Avval o'quvchi qo'shing.")
 
-# B. O'QUVCHI QO'SHISH BO'LIMI
+# B. O'QUVCHI QO'SHISH BO'LIMI (Yakkalik va Excel)
 elif page == "O'quvchi qo'shish":
-    st.header("🆕 Yangi o'quvchi qo'shish")
-    col1, col2 = st.columns(2)
-    with col1:
-        ism = st.text_input("O'quvchi F.I.Sh:")
-    with col2:
-        sinf = st.text_input("Sinf nomi (masalan: 9-A):")
+    st.header("🆕 O'quvchilarni tizimga kiritish")
     
-    if st.button("Bazaga saqlash"):
-        if ism and sinf:
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO students (name, grade) VALUES (?, ?)", (ism, sinf))
-            conn.commit()
-            st.success(f"{ism} muvaffaqiyatli qo'shildi!")
-            st.balloons()
-        else:
-            st.error("Iltimos, ism va sinfni to'liq kiriting!")
+    tab1, tab2 = st.tabs(["Yakkalik qo'shish", "Excel/CSV orqali yuklash"])
+    
+    with tab1:
+        col1, col2 = st.columns(2)
+        with col1:
+            ism = st.text_input("O'quvchi F.I.Sh:", key="single_name")
+        with col2:
+            sinf = st.text_input("Sinf (masalan: 9-A):", key="single_grade")
+        
+        if st.button("Bazaga saqlash", key="save_single"):
+            if ism and sinf:
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO students (name, grade) VALUES (?, ?)", (ism, sinf))
+                conn.commit()
+                st.success(f"{ism} muvaffaqiyatli qo'shildi!")
+                st.balloons()
+            else:
+                st.error("Iltimos, ism va sinfni to'liq kiriting!")
+    
+    with tab2:
+        st.subheader("📁 Fayl orqali ommaviy yuklash")
+        st.info("Fayl ustunlari nomi 'name' va 'grade' bo'lishi kerak.")
+        uploaded_file = st.file_uploader("Excel yoki CSV faylni tanlang", type=["xlsx", "csv"])
+        
+        if uploaded_file is not None:
+            try:
+                if uploaded_file.name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file)
+                else:
+                    df = pd.read_excel(uploaded_file)
+                
+                st.write("Fayl tarkibi (birinchi 5 qator):", df.head())
+                
+                if st.button("Barcha o'quvchilarni bazaga yuklash"):
+                    cursor = conn.cursor()
+                    for index, row in df.iterrows():
+                        cursor.execute("INSERT INTO students (name, grade) VALUES (?, ?)", 
+                                     (str(row['name']), str(row['grade'])))
+                    conn.commit()
+                    st.success(f"{len(df)} ta o'quvchi bazaga muvaffaqiyatli qo'shildi!")
+                    st.balloons()
+            except Exception as e:
+                st.error(f"Xatolik: {e}. Ustunlar 'name' va 'grade' ekanini tekshiring.")
 
 # C. KONSEPT GENERATOR BO'LIMI
 elif page == "Konspekt Generator":
